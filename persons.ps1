@@ -96,7 +96,6 @@ while($true)
 
 }
 
-$persons = [System.Collections.ArrayList]@();
 foreach($student in $students)
 {
     $person = @{};
@@ -134,5 +133,5 @@ foreach($student in $students)
         }   
     }
 
-    [void]$persons.Add($person);
+    Write-Output ($person | ConvertTo-Json -Depth 20);
 }
