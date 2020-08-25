@@ -6,8 +6,6 @@ $expansions = @("demographics", "school_enrollment", "contact_info");
 $extensions = @();
 $filter = "name.last_name==*;school_enrollment.enroll_status_code==(-1,0)"
 
-$pagesize = 1000;
-
 #Get OAuth Token
 $Token = [System.Convert]::ToBase64String( [System.Text.Encoding]::ASCII.GetBytes("$($apiKey):$($apiSecret)") );
 $headers = @{ Authorization = "Basic " + $Token };
