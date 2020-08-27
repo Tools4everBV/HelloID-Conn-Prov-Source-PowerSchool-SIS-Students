@@ -14,7 +14,7 @@ $headers.Add("Accept", "application/json")
 
 #Get Schools
 Write-Verbose -Verbose "Retrieving Schools"
-$uri = "https://partner3.powerschool.com/ws/v1/district/school/count"
+$uri = "$($baseurl)/ws/v1/district/school/count"
 $count = (Invoke-RestMethod $uri -Method GET -Headers $headers ).resource.count
 $page = 1;
 $schools = [System.Collections.ArrayList]@();
