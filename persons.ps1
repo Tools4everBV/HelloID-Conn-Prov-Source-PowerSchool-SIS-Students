@@ -127,7 +127,7 @@ foreach($student in $students)
                 $contract[$prop.Name] = "$($prop.Value)";
             }
 
-            $person['Contracts'].Add($contract);
+            [void]$person['Contracts'].Add($contract);
             $person['Location'] = $location;
             break;
         }   
