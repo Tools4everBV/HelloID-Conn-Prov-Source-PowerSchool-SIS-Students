@@ -18,7 +18,7 @@ $headers.Add("Accept", "application/json")
 
 
 #Count Students
-$uri = "https://partner3.powerschool.com/ws/v1/district/student/count"
+$uri = "$($baseurl)/ws/v1/district/student/count"
 $parameters = @{
                     q = "name.last_name==*;school_enrollment.enroll_status_code==(-1,0)";
 }
@@ -63,7 +63,7 @@ while($true)
 
 #Get Schools
 Write-Verbose -Verbose "Retrieving Schools"
-$uri = "https://partner3.powerschool.com/ws/v1/district/school/count"
+$uri = "$($baseurl)/ws/v1/district/school/count"
 $count = (Invoke-RestMethod $uri -Method GET -Headers $headers ).resource.count
 $page = 1;
 $schools = [System.Collections.ArrayList]@();
