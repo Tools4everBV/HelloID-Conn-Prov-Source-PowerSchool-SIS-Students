@@ -3,6 +3,8 @@ $baseurl = "https://<CUSTOMER>.powerschool.com";
 $apiKey = "<KEY>";
 $apiSecret = "<SECRET>";
 
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
+
 #Get OAuth Token
 $Token = [System.Convert]::ToBase64String( [System.Text.Encoding]::ASCII.GetBytes("$($apiKey):$($apiSecret)") );
 $headers = @{ Authorization = "Basic " + $Token };
