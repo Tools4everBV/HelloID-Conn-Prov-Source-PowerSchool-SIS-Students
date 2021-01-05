@@ -1,8 +1,7 @@
 # HelloID-Conn-Prov-Source-PowerSchool
 HelloID Provisioning Source Connector for PowerSchool
 
-##API Setup
-- Install Plugin
+## API Setup
 - Click System Settings. The System Settings page appears.
 - Click Plugin Management Configuration. The Plugin Management Dashboard page appears.
 - Click Install. The Plugin Install page appears.
