@@ -98,16 +98,33 @@ while($true)
 
 }
 
+function Get-ObjectProperties 
+{
+    param ($Object, $Depth = 0, $MaxDepth = 10)
+    $OutObject = @{};
+
+    foreach($prop in $Object.PSObject.properties)
+    {
+        if ($prop.TypeNameOfValue -eq "System.Management.Automation.PSCustomObject" -or $prop.TypeNameOfValue -eq "System.Object" -and $Depth -lt $MaxDepth)
+        {
+            $OutObject[$prop.Name] = Get-ObjectProperties -Object $prop.Value -Depth ($Depth + 1);
+        }
+        else
+        {
+            $OutObject[$prop.Name] = "$($prop.Value)";
+        }
+    }
+    return $OutObject;
+}
+
 foreach($student in $students)
 {
     $person = @{};
+
+    $person = Get-ObjectProperties -Object $student;
+
     $person['ExternalId'] = if($student.id) { $student.Id } else { $student.local_id }
     $person['DisplayName'] = "$($student.FullNameFL) ($($person.ExternalId))";
-
-    foreach($prop in $student.PSObject.properties)
-    {
-        $person[$prop.Name] = "$($prop.Value)";
-    }
 
     $person['Contracts'] = [System.Collections.ArrayList]@();
 
@@ -118,16 +135,10 @@ foreach($student in $students)
             $contract = @{};
             $location = @{};
 
-            foreach($prop in $school.PSObject.properties)
-            {
-                $contract[$prop.Name] = "$($prop.Value)";
-                $location[$prop.Name] = "$($prop.Value)";
-            }
+            $contract = Get-ObjectProperties -Object $school;
+            $location = Get-ObjectProperties -Object $school;
 
-            foreach($prop in $student.school_enrollment.PSObject.properties)
-            {
-                $contract[$prop.Name] = "$($prop.Value)";
-            }
+            $contract['School_enrollment'] = Get-ObjectProperties -Object $student.school_enrollment;
 
             [void]$person['Contracts'].Add($contract);
             $person['Location'] = $location;
