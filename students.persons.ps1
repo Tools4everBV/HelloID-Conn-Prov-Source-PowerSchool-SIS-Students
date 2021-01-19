@@ -1,17 +1,13 @@
-#Config
-$baseurl = "https://<CUSTOMER>.powerschool.com";
-$apiKey = "<KEY>";
-$apiSecret = "<SECRET>";
-$expansions = @("demographics", "school_enrollment", "contact_info");
-$extensions = @();
-$filter = "name.last_name==*;school_enrollment.enroll_status_code==(-1,0)"
-
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
+#Configuration
+$config = ConvertFrom-Json $configuration;
+$expansions = $config.expansions -split (",");
+$extensions = $config.extensions -split (",");
 
 #Get OAuth Token
-$Token = [System.Convert]::ToBase64String( [System.Text.Encoding]::ASCII.GetBytes("$($apiKey):$($apiSecret)") );
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
+$Token = [System.Convert]::ToBase64String( [System.Text.Encoding]::ASCII.GetBytes("$($config.apiKey):$($config.apiSecret)") );
 $headers = @{ Authorization = "Basic " + $Token };
-$tokenResponse = Invoke-RestMethod -uri "$($baseurl)/oauth/access_token" -Method 'POST' -Headers $headers -Body (@{grant_type= "client_credentials";})
+$tokenResponse = Invoke-RestMethod -uri "$($config.baseurl)/oauth/access_token" -Method 'POST' -Headers $headers -Body (@{grant_type= "client_credentials";})
 
 
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
@@ -20,9 +16,9 @@ $headers.Add("Accept", "application/json")
 
 
 #Count Students
-$uri = "$($baseurl)/ws/v1/district/student/count"
+$uri = "$($config.baseurl)/ws/v1/district/student/count"
 $parameters = @{
-                    q = "name.last_name==*;school_enrollment.enroll_status_code==(-1,0)";
+                    q = $config.filter;
 }
 $count = (Invoke-RestMethod $uri -Method GET -Headers $headers  -Body $parameters).resource.count
 
@@ -36,10 +32,10 @@ while($true)
         expansions = ($expansions -join ',');
         page = $page;
         pagesize = 100
-        q = $filter;
+        q = $config.filter;
 
     }
-    $uri = "$($baseurl)/ws/v1/district/student"
+    $uri = "$($config.baseurl)/ws/v1/district/student"
     Write-Verbose -Verbose "Page $($page)";
     $response = Invoke-RestMethod $uri -Method GET -Headers $headers -Body $parameters
     
@@ -65,7 +61,7 @@ while($true)
 
 #Get Schools
 Write-Verbose -Verbose "Retrieving Schools"
-$uri = "$($baseurl)/ws/v1/district/school/count"
+$uri = "$($config.baseurl)/ws/v1/district/school/count"
 $count = (Invoke-RestMethod $uri -Method GET -Headers $headers ).resource.count
 $page = 1;
 $schools = [System.Collections.ArrayList]@();
@@ -75,7 +71,7 @@ while($true)
         page = $page;
         pagesize = 100;
     }
-    $uri = "$($baseurl)/ws/v1/district/school"
+    $uri = "$($config.baseurl)/ws/v1/district/school"
     $response = Invoke-RestMethod $uri -Method GET -Headers $headers -Body $parameters
     
     if($response.schools.school -is [array])
@@ -124,7 +120,7 @@ foreach($student in $students)
     $person = Get-ObjectProperties -Object $student;
 
     $person['ExternalId'] = if($student.id) { $student.Id } else { $student.local_id }
-    $person['DisplayName'] = "$($student.FullNameFL) ($($person.ExternalId))";
+    $person['DisplayName'] = "$($student.Name.first_name) $($student.name.last_name) ($($person.ExternalId))";
 
     $person['Contracts'] = [System.Collections.ArrayList]@();
 

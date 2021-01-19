@@ -1,14 +1,15 @@
 #Config
-$baseurl = "https://<CUSTOMER>.powerschool.com";
-$apiKey = "<KEY>";
-$apiSecret = "<SECRET>";
+$config = ConvertFrom-Json $configuration;
+$expansions = $config.expansions -split (",");
+$extensions = $config.extensions -split (",");
 
 [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
 
 #Get OAuth Token
-$Token = [System.Convert]::ToBase64String( [System.Text.Encoding]::ASCII.GetBytes("$($apiKey):$($apiSecret)") );
+[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
+$Token = [System.Convert]::ToBase64String( [System.Text.Encoding]::ASCII.GetBytes("$($config.apiKey):$($config.apiSecret)") );
 $headers = @{ Authorization = "Basic " + $Token };
-$tokenResponse = Invoke-RestMethod -uri "$($baseurl)/oauth/access_token" -Method 'POST' -Headers $headers -Body (@{grant_type= "client_credentials";})
+$tokenResponse = Invoke-RestMethod -uri "$($config.baseurl)/oauth/access_token" -Method 'POST' -Headers $headers -Body (@{grant_type= "client_credentials";})
 
 $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
 $headers.Add("Authorization", "Bearer $($tokenResponse.access_token)")
@@ -16,7 +17,7 @@ $headers.Add("Accept", "application/json")
 
 #Get Schools
 Write-Verbose -Verbose "Retrieving Schools"
-$uri = "$($baseurl)/ws/v1/district/school/count"
+$uri = "$($config.baseurl)/ws/v1/district/school/count"
 $count = (Invoke-RestMethod $uri -Method GET -Headers $headers ).resource.count
 $page = 1;
 $schools = [System.Collections.ArrayList]@();
@@ -26,7 +27,7 @@ while($true)
         page = $page;
         pagesize = 100;
     }
-    $uri = "$($baseurl)/ws/v1/district/school"
+    $uri = "$($config.baseurl)/ws/v1/district/school"
     $response = Invoke-RestMethod $uri -Method GET -Headers $headers -Body $parameters
     
     if($response.schools.school -is [array])
