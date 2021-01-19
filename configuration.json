@@ -1,0 +1,58 @@
+[
+  {
+    "key": "baseurl",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "Base URI",
+      "required": true,
+      "placeholder": "https://customername.powerschool.com"
+    }
+  },
+  {
+    "key": "apiKey",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "Client Key",
+      "required": true
+    }
+  },
+  {
+    "key": "apiSecret",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "Client Secret",
+      "type": "password",
+      "required": true
+    }
+  },
+  {
+    "key": "expansions",
+    "type": "input",
+    "defaultValue": "demographics, school_enrollment, contact_info",
+    "templateOptions": {
+      "label": "Expansions",
+      "required": true
+    }
+  },
+  {
+    "key": "extensions",
+    "type": "input",
+    "defaultValue": "",
+    "templateOptions": {
+      "label": "Extensions",
+      "required": true
+    }
+  },
+  {
+    "key": "filter",
+    "type": "input",
+    "defaultValue": "name.last_name==*;school_enrollment.enroll_status_code==(-1,0)",
+    "templateOptions": {
+      "label": "Filter",
+      "required": false
+    }
+  }
+]
