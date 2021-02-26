@@ -1,5 +1,5 @@
-# HelloID-Conn-Prov-Source-PowerSchool
-HelloID Provisioning Source Connector for PowerSchool
+# HelloID-Conn-Prov-Source-PowerSchool-SIS
+HelloID Provisioning Source Connector for PowerSchool SIS
 
 ## API Setup
 - Click System Settings. The System Settings page appears.
