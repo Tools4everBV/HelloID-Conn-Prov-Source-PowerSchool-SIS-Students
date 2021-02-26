@@ -1,4 +1,4 @@
-# HelloID-Conn-Prov-Source-PowerSchool-SIS
+# HelloID-Conn-Prov-Source-PowerSchool-SIS-Students
 HelloID Provisioning Source Connector for PowerSchool SIS
 
 ## API Setup
