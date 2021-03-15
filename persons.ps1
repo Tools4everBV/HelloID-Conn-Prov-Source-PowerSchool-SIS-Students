@@ -1,102 +1,44 @@
-#Configuration
+#region Configuration
 $config = ConvertFrom-Json $configuration;
 $expansions = $config.expansions -split (",");
 $extensions = $config.extensions -split (",");
 
-#Get OAuth Token
-[System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
-$Token = [System.Convert]::ToBase64String( [System.Text.Encoding]::ASCII.GetBytes("$($config.apiKey):$($config.apiSecret)") );
-$headers = @{ Authorization = "Basic " + $Token };
-$tokenResponse = Invoke-RestMethod -uri "$($config.baseurl)/oauth/access_token" -Method 'POST' -Headers $headers -Body (@{grant_type= "client_credentials";})
+# Set TLS to accept TLS, TLS 1.1 and TLS 1.2
+[Net.ServicePointManager]::SecurityProtocol = [Net.SecurityProtocolType]::Tls -bor [Net.SecurityProtocolType]::Tls11 -bor [Net.SecurityProtocolType]::Tls12
+#endregion Configuration
 
-
-$headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-$headers.Add("Authorization", "Bearer $($tokenResponse.access_token)")
-$headers.Add("Accept", "application/json")
-
-
-#Count Students
-$uri = "$($config.baseurl)/ws/v1/district/student/count"
-$parameters = @{
-                    q = $config.filter;
-}
-$count = (Invoke-RestMethod $uri -Method GET -Headers $headers  -Body $parameters).resource.count
-
-#Get Students
-Write-Verbose -Verbose "Retrieving Students"
-$page = 1;
-$students = [System.Collections.ArrayList]@();
-while($true)
-{
-    $parameters = @{
-        expansions = ($expansions -join ',');
-        page = $page;
-        pagesize = 100
-        q = $config.filter;
-
-    }
-    $uri = "$($config.baseurl)/ws/v1/district/student"
-    Write-Verbose -Verbose "Page $($page)";
-    $response = Invoke-RestMethod $uri -Method GET -Headers $headers -Body $parameters
-    
-    if($response.students.student -is [array])
+#region Functions
+function New-AccessToken() {
+    [cmdletbinding()]
+    Param (
+        [object]$config
+    ) 
+    Process
     {
-        [void]$students.AddRange($response.students.student);
-    }
-    else
-    {
-        [void]$students.Add($response.students.student);
-    }
+        #Get OAuth Token
+        [System.Net.ServicePointManager]::SecurityProtocol = [System.Net.SecurityProtocolType]::Tls12;
+        $Token = [System.Convert]::ToBase64String( [System.Text.Encoding]::ASCII.GetBytes("$($config.apiKey):$($config.apiSecret)") );
+        $headers = @{ Authorization = "Basic " + $Token };
+        $tokenResponse = Invoke-RestMethod -uri "$($config.baseurl)/oauth/access_token" -Method 'POST' -Headers $headers -Body (@{grant_type= "client_credentials";})
 
-    if($students.count -lt $count)
-    {
-        $page++;
-    }
-    else
-    {
-        break;
-    }
 
+        $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
+        $headers.Add("Authorization", "Bearer $($tokenResponse.access_token)")
+        $headers.Add("Accept", "application/json")
+
+        return $headers;
+    }
 }
 
-#Get Schools
-Write-Verbose -Verbose "Retrieving Schools"
-$uri = "$($config.baseurl)/ws/v1/district/school/count"
-$count = (Invoke-RestMethod $uri -Method GET -Headers $headers ).resource.count
-$page = 1;
-$schools = [System.Collections.ArrayList]@();
-while($true)
-{
-    $parameters = @{
-        page = $page;
-        pagesize = 100;
-    }
-    $uri = "$($config.baseurl)/ws/v1/district/school"
-    $response = Invoke-RestMethod $uri -Method GET -Headers $headers -Body $parameters
-    
-    if($response.schools.school -is [array])
-    {
-        [void]$schools.AddRange($response.schools.school);
-    }
-    else
-    {
-        [void]$schools.Add($response.schools.school);
-    }
-
-    if($schools.count -lt $count)
-    {
-        $page++;
-    }
-    else
-    {
-        break;
-    }
-
-}
 
 function Get-ObjectProperties 
 {
-    param ($Object, $Depth = 0, $MaxDepth = 10)
+    [cmdletbinding()]
+    param (
+        [object]$Object, 
+        [int]$Depth = 0, 
+        [int]$MaxDepth = 10
+    )
     $OutObject = @{};
 
     foreach($prop in $Object.PSObject.properties)
@@ -113,34 +55,164 @@ function Get-ObjectProperties
     return $OutObject;
 }
 
-foreach($student in $students)
+function Get-ErrorMessage
 {
-    $person = @{};
-
-    $person = Get-ObjectProperties -Object $student;
-
-    $person['ExternalId'] = if($student.id) { $student.Id } else { $student.local_id }
-    $person['DisplayName'] = "$($student.Name.first_name) $($student.name.last_name) ($($person.ExternalId))";
-
-    $person['Contracts'] = [System.Collections.ArrayList]@();
-
-    foreach($school in $schools)
-    {
-        if($school.Id -eq $student.school_enrollment.school_id)
-        {
-            $contract = @{};
-            $location = @{};
-
-            $contract = Get-ObjectProperties -Object $school;
-            $location = Get-ObjectProperties -Object $school;
-
-            $contract['School_enrollment'] = Get-ObjectProperties -Object $student.school_enrollment;
-
-            [void]$person['Contracts'].Add($contract);
-            $person['Location'] = $location;
-            break;
-        }   
-    }
-
-    Write-Output ($person | ConvertTo-Json -Depth 20);
+    [cmdletbinding()]
+    param (
+        [object]$Response
+    )
+    $reader = New-Object System.IO.StreamReader($Response.Exception.Response.GetResponseStream())
+    $reader.BaseStream.Position = 0
+    $reader.DiscardBufferedData()
+    Write-Error "StatusCode: $($Response.Exception.Response.StatusCode.value__)`nStatusDescription: $($Response.Exception.Response.StatusDescription)`nMessage: $($reader.ReadToEnd())"
 }
+#endregion Functions
+
+#region Execute
+try {
+        $headers = New-AccessToken -Config $config;
+
+        #Count Students
+        $uri = "$($config.baseurl)/ws/v1/district/student/count"
+        $parameters = @{
+                            q = $config.filter;
+        }
+        try
+        {
+            Write-Information "Retrieving $($uri)"
+            $count = (Invoke-RestMethod $uri -Method GET -Headers $headers -Body $parameters).resource.count
+        }
+        catch
+        {
+            Get-ErrorMessage -response $_;
+            break;
+        }
+
+        #Get Students
+        Write-Information "Retrieving Students (Total Expected: $($count))"
+        $page = 1;
+        $students = [System.Collections.ArrayList]@();
+        while($true)
+        {
+            $parameters = @{
+                expansions = ($expansions -join ',');
+                page = $page;
+                pagesize = $config.pageSize;
+                q = $config.filter;
+
+            }
+            $uri = "$($config.baseurl)/ws/v1/district/student"
+            
+
+            try {
+                Write-Information "Retrieving $($uri) - Page $($page)"
+                $response = Invoke-RestMethod $uri -Method GET -Headers $headers -Body $parameters
+            }    
+            catch {
+                Get-ErrorMessage -Response $_;
+                throw $_;
+            }
+
+            if($response.students.student -is [array])
+            {
+                [void]$students.AddRange($response.students.student);
+            }
+            else
+            {
+                [void]$students.Add($response.students.student);
+            }
+
+            if($students.count -lt $count)
+            {
+                $page++;
+            }
+            else
+            {
+                break;
+            }
+
+        }
+
+        #Get Schools
+        Write-Information "Retrieving Schools"
+        $uri = "$($config.baseurl)/ws/v1/district/school/count"
+        $count = (Invoke-RestMethod $uri -Method GET -Headers $headers ).resource.count
+        $page = 1;
+        $schools = [System.Collections.ArrayList]@();
+    
+        while($true)
+        {
+            $parameters = @{
+                page = $page;
+                pagesize = $config.pageSize;
+            }
+            $uri = "$($config.baseurl)/ws/v1/district/school"
+        
+            try
+            {
+                Write-Information "Retrieving $($uri) - Page $($page)"
+                $response = Invoke-RestMethod $uri -Method GET -Headers $headers -Body $parameters
+            }    
+            catch {
+                Get-ErrorMessage -response $_;
+                throw $_;
+            }
+            if($response.schools.school -is [array])
+            {
+                [void]$schools.AddRange($response.schools.school);
+            }
+            else
+            {
+                [void]$schools.Add($response.schools.school);
+            }
+
+            if($schools.count -lt $count)
+            {
+                $page++;
+            }
+            else
+            {
+                break;
+            }
+
+        }
+
+
+        foreach($student in $students)
+        {
+            if($student.school_enrollment.school_id -ne "3") { continue; }
+            $person = @{};
+
+            $person = Get-ObjectProperties -Object $student;
+
+            $person['ExternalId'] = if($student.id) { $student.Id } else { $student.local_id }
+            $person['DisplayName'] = "$($student.Name.first_name) $($student.name.last_name) ($($person.ExternalId))";
+
+            $person['Contracts'] = [System.Collections.ArrayList]@();
+
+            foreach($school in $schools)
+            {
+                if($school.Id -eq $student.school_enrollment.school_id)
+                {
+                    $contract = @{};
+                    $location = @{};
+
+                    $contract = Get-ObjectProperties -Object $school;
+                    $location = Get-ObjectProperties -Object $school;
+
+                    $contract['School_enrollment'] = Get-ObjectProperties -Object $student.school_enrollment;
+
+                    [void]$person['Contracts'].Add($contract);
+                    $person['Location'] = $location;
+                    break;
+                }   
+            }
+
+            Write-Output ($person | ConvertTo-Json -Depth 20);
+        }
+} catch
+{
+    Write-Error $_;
+}
+
+#endregion Execute
