@@ -31,7 +31,7 @@
   {
     "key": "expansions",
     "type": "input",
-    "defaultValue": "demographics, school_enrollment, contact_info",
+    "defaultValue": "demographics,school_enrollment,contact_info",
     "templateOptions": {
       "label": "Expansions",
       "required": true
@@ -43,7 +43,7 @@
     "defaultValue": "",
     "templateOptions": {
       "label": "Extensions",
-      "required": true
+      "required": false
     }
   },
   {
@@ -53,6 +53,16 @@
     "templateOptions": {
       "label": "Filter",
       "required": false
+    }
+  },
+  {
+    "key": "pageSize",
+    "type": "input",
+    "defaultValue": "100",
+    "templateOptions": {
+      "label": "Page Size",
+      "required": true,
+      "placeholder": "Value should between 100 and 1000"
     }
   }
 ]
