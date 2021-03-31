@@ -180,7 +180,6 @@ try {
 
         foreach($student in $students)
         {
-            if($student.school_enrollment.school_id -ne "3") { continue; }
             $person = @{};
 
             $person = Get-ObjectProperties -Object $student;
