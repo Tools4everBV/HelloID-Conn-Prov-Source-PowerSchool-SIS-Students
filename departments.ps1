@@ -20,11 +20,11 @@ function New-AccessToken() {
         $Token = [System.Convert]::ToBase64String( [System.Text.Encoding]::ASCII.GetBytes("$($config.apiKey):$($config.apiSecret)") );
         $headers = @{ Authorization = "Basic " + $Token };
         $tokenResponse = Invoke-RestMethod -uri "$($config.baseurl)/oauth/access_token" -Method 'POST' -Headers $headers -Body (@{grant_type= "client_credentials";})
-
-
-        $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-        $headers.Add("Authorization", "Bearer $($tokenResponse.access_token)")
-        $headers.Add("Accept", "application/json")
+        
+        $headers = @{
+            "Authorization"= "Bearer $($tokenResponse.access_token)"
+            "Accept"= "application/json"
+        }
 
         return $headers;
     }
@@ -76,6 +76,9 @@ try {
     Write-Information "Retrieving Departments (Schools)"
     $uri = "$($config.baseurl)/ws/v1/district/school/count"
     $count = (Invoke-RestMethod $uri -Method GET -Headers $headers ).resource.count
+    Write-Information "$($count) Schools returned"
+    if($count -eq 0 -or $count -eq $null){throw "Invalid result count for departments"}
+    
     $page = 1;
     $schools = [System.Collections.ArrayList]@();
     
@@ -130,6 +133,6 @@ try {
 }
 catch
 {
-
+    throw "Failed to get schools - $_"
 }
 #endregion Execute

@@ -21,10 +21,10 @@ function New-AccessToken() {
         $headers = @{ Authorization = "Basic " + $Token };
         $tokenResponse = Invoke-RestMethod -uri "$($config.baseurl)/oauth/access_token" -Method 'POST' -Headers $headers -Body (@{grant_type= "client_credentials";})
 
-
-        $headers = New-Object "System.Collections.Generic.Dictionary[[String],[String]]"
-        $headers.Add("Authorization", "Bearer $($tokenResponse.access_token)")
-        $headers.Add("Accept", "application/json")
+		$headers = @{
+            "Authorization"= "Bearer $($tokenResponse.access_token)"
+            "Accept"= "application/json"
+        }
 
         return $headers;
     }
@@ -211,7 +211,7 @@ try {
         }
 } catch
 {
-    Write-Error $_;
+    throw $_;
 }
 
 #endregion Execute
