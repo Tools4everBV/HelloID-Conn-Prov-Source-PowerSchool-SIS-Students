@@ -61,10 +61,15 @@ function Get-ErrorMessage
     param (
         [object]$Response
     )
-    $reader = New-Object System.IO.StreamReader($Response.Exception.Response.GetResponseStream())
-    $reader.BaseStream.Position = 0
-    $reader.DiscardBufferedData()
-    Write-Error "StatusCode: $($Response.Exception.Response.StatusCode.value__)`nStatusDescription: $($Response.Exception.Response.StatusDescription)`nMessage: $($reader.ReadToEnd())"
+    try {
+        $reader = New-Object System.IO.StreamReader($Response.Exception.Response.GetResponseStream())
+        $reader.BaseStream.Position = 0
+        $reader.DiscardBufferedData()
+        Write-Error "StatusCode: $($Response.Exception.Response.StatusCode.value__)`nStatusDescription: $($Response.Exception.Response.StatusDescription)`nMessage: $($reader.ReadToEnd())"
+    } catch
+    {
+        Write-Information $response
+    }
 }
 #endregion Functions
 
