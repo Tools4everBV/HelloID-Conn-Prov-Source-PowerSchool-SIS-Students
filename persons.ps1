@@ -33,12 +33,7 @@ function New-AccessToken() {
 
 function Get-ObjectProperties 
 {
-    [cmdletbinding()]
-    param (
-        [object]$Object, 
-        [int]$Depth = 0, 
-        [int]$MaxDepth = 10
-    )
+    param ($Object, $Depth = 0, $MaxDepth = 10)
     $OutObject = @{};
 
     foreach($prop in $Object.PSObject.properties)
@@ -47,13 +42,38 @@ function Get-ObjectProperties
         {
             $OutObject[$prop.Name] = Get-ObjectProperties -Object $prop.Value -Depth ($Depth + 1);
         }
+        elseif ($prop.TypeNameOfValue -eq "System.Object[]") 
+        {
+            $OutObject[$prop.Name] = [System.Collections.ArrayList]@()
+            foreach($item in $prop.Value)
+            {
+                $OutObject[$prop.Name].Add($item)
+            }
+        }
         else
         {
-            $OutObject[$prop.Name] = "$($prop.Value)";
+            $OutObject[$prop.Name] = "$($prop.Value)"
         }
     }
     return $OutObject;
 }
+
+function Get-ExtensionData
+{
+    param ($Object)
+    $OutObject = @{};
+
+    foreach($item in $Object.'_table_extension')
+    {
+        foreach($field in $item.'_field')
+        {
+            $OutObject[$field.Name] = $field.value
+        }
+    }
+
+    return $OutObject;
+}
+
 
 function Get-ErrorMessage
 {
@@ -188,7 +208,8 @@ try {
             $person = @{};
 
             $person = Get-ObjectProperties -Object $student;
-
+			$person['extensionData'] = Get-ExtensionData $student.'_extension_data'
+			
             $person['ExternalId'] = if($student.id) { $student.Id } else { $student.local_id }
             $person['DisplayName'] = "$($student.Name.first_name) $($student.name.last_name) ($($person.ExternalId))";
 
