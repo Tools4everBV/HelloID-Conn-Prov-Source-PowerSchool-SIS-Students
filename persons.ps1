@@ -129,13 +129,23 @@ try {
             $uri = "$($config.baseurl)/ws/v1/district/student"
             
 
-            try {
-                Write-Information "Retrieving $($uri) - Page $($page)"
-                $response = Invoke-RestMethod $uri -Method GET -Headers $headers -Body $parameters
-            }    
-            catch {
-                Get-ErrorMessage -Response $_;
-                throw $_;
+            while($true) {
+                try {
+                    if($retryCount -gt 0 ) {
+                        Write-Information "Retrieving $($uri) - Page $($page) - Retry Attempt [$($retryCount)]"
+                    } else { 
+                        Write-Information "Retrieving $($uri) - Page $($page)"
+                    }
+                    $response = Invoke-RestMethod $uri -Method GET -Headers $headers -Body $parameters
+                    break
+                }    
+                catch {
+                    $retryCount++
+                    if($retryCount -gt 5) {
+                        Get-ErrorMessage -Response $_;
+                        throw $_;
+                    }
+                }
             }
 
             if($response.students.student -is [array])
@@ -211,6 +221,8 @@ try {
 			$person['extensionData'] = Get-ExtensionData $student.'_extension_data'
 			
             $person['ExternalId'] = if($student.id) { $student.Id } else { $student.local_id }
+			if($person.ExternalId.length -lt 1) { continue }
+			
             $person['DisplayName'] = "$($student.Name.first_name) $($student.name.last_name) ($($person.ExternalId))";
 
             $person['Contracts'] = [System.Collections.ArrayList]@();
